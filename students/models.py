@@ -2,6 +2,7 @@
 from django.core.validators import FileExtensionValidator
 from django.db import models
 from PIL import Image, UnidentifiedImageError
+from datetime import date
 
 
 MAX_STUDENT_CARD_SIZE = 5 * 1024 * 1024
@@ -56,6 +57,21 @@ class Student(models.Model):
         choices=STATUS_CHOICES,
         default='Active'
     )
+
+    card_expiry_date = models.DateField(null=True, blank=True)
+
+    def effective_status(self, on_date=None):
+        check_date = on_date or date.today()
+        if self.card_expiry_date is None:
+            return self.status
+        return 'Active' if check_date <= self.card_expiry_date else 'Inactive'
+
+    def sync_status(self, on_date=None):
+        effective_status = self.effective_status(on_date)
+        if self.card_expiry_date is not None and self.status != effective_status:
+            self.status = effective_status
+            return True
+        return False
 
     def __str__(self):
         return f"{self.student_name} - {self.roll_number}"

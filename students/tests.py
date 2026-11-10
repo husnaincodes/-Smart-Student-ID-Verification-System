@@ -1,5 +1,6 @@
 from django.test import TestCase
 from io import BytesIO
+from datetime import date, timedelta
 from tempfile import TemporaryDirectory
 from types import SimpleNamespace
 
@@ -8,10 +9,12 @@ from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase, override_settings
+from django.core.management import call_command
 from django.urls import reverse
 from PIL import Image
 
 from .admin import StudentAdmin
+from .admin import StudentAdminForm
 from .models import Student
 
 
@@ -42,6 +45,21 @@ class StudentVerificationTests(TestCase):
 			student_card=image_upload('inactive.png'),
 			status='Inactive',
 		)
+		cls.future_student = Student.objects.create(
+			student_name='Future Card Student', roll_number='CS-003', batch_year=2025,
+			department='Computer Science', student_card=image_upload('future.png'),
+			status='Inactive', card_expiry_date=date.today() + timedelta(days=30),
+		)
+		cls.today_student = Student.objects.create(
+			student_name='Today Card Student', roll_number='CS-004', batch_year=2025,
+			department='Computer Science', student_card=image_upload('today.png'),
+			status='Inactive', card_expiry_date=date.today(),
+		)
+		cls.expired_student = Student.objects.create(
+			student_name='Expired Card Student', roll_number='CS-005', batch_year=2025,
+			department='Computer Science', student_card=image_upload('expired.png'),
+			status='Active', card_expiry_date=date.today() - timedelta(days=1),
+		)
 		cls.user_model = get_user_model()
 		cls.guard = cls.user_model.objects.create_user(username='guard', password='guard-pass')
 		cls.admin = cls.user_model.objects.create_superuser(
@@ -67,6 +85,7 @@ class StudentVerificationTests(TestCase):
 
 		self.assertEqual(response.status_code, 200)
 		self.assertContains(response, 'Student found')
+		self.assertContains(response, 'Active')
 		self.assertContains(response, self.student.student_card.url)
 
 	def test_wrong_roll_number_batch_or_department_shows_not_found(self):
@@ -77,13 +96,44 @@ class StudentVerificationTests(TestCase):
 		):
 			with self.subTest(overrides=overrides):
 				response = self.client.get(self.search_url(**overrides))
-				self.assertContains(response, 'Student not found')
+				self.assertContains(response, 'Student Record Not Found')
 
-	def test_inactive_student_is_not_returned(self):
+	def test_inactive_student_is_returned_with_its_card(self):
 		response = self.client.get(self.search_url(roll_number='CS-002'))
 
-		self.assertContains(response, 'Student not found')
-		self.assertNotContains(response, self.inactive_student.student_card.url)
+		self.assertContains(response, 'Inactive')
+		self.assertContains(response, 'Not Valid for Entry')
+		self.assertContains(response, self.inactive_student.student_card.url)
+
+	def test_future_and_today_expiry_are_valid_for_entry(self):
+		for roll_number in ('CS-003', 'CS-004'):
+			with self.subTest(roll_number=roll_number):
+				response = self.client.get(self.search_url(roll_number=roll_number))
+				self.assertContains(response, 'Active - Valid for Entry')
+				self.assertContains(response, 'Card expiry date')
+
+	def test_expired_card_is_not_valid_for_entry(self):
+		response = self.client.get(self.search_url(roll_number='CS-005'))
+
+		self.assertContains(response, 'Inactive - Not Valid for Entry')
+		self.assertContains(response, 'Expired Card Student')
+
+	def test_legacy_record_without_expiry_keeps_existing_status(self):
+		self.assertIsNone(self.student.card_expiry_date)
+		self.assertEqual(self.student.effective_status(), 'Active')
+
+	def test_new_admin_student_requires_expiry_date(self):
+		form = StudentAdminForm()
+
+		self.assertTrue(form.fields['card_expiry_date'].required)
+
+	def test_status_sync_command_updates_expired_cards_and_skips_legacy_rows(self):
+		call_command('sync_student_status')
+
+		self.expired_student.refresh_from_db()
+		self.student.refresh_from_db()
+		self.assertEqual(self.expired_student.status, 'Inactive')
+		self.assertEqual(self.student.status, 'Active')
 
 	def test_reset_returns_empty_dashboard(self):
 		response = self.client.get(reverse('student_search'))

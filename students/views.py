@@ -18,8 +18,10 @@ def student_search(request):
             batch_year=form.cleaned_data['year'],
             department=form.cleaned_data['department'],
             roll_number=form.cleaned_data['roll_number'],
-            status='Active',
         ).first()
+
+    if student:
+        student.verification_status = student.effective_status()
 
     student_card_url = None
     if student and student.student_card and default_storage.exists(student.student_card.name):

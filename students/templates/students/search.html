@@ -31,6 +31,8 @@
         .id-card { max-width: 100%; max-height: 620px; width: auto; object-fit: contain; border-radius: 2px !important; border: 1px solid var(--line); }
         .status-icon { font-size: 2.25rem; }
         .result-panel .alert { border-radius: 2px; }
+        .status-badge { border-radius: 2px; font-size: .82rem; letter-spacing: .06em; text-transform: uppercase; }
+        .inactive-warning { border-left: 5px solid #b02a37; }
         .ready-mark { color: var(--gold); }
     </style>
 </head>
@@ -80,19 +82,33 @@
                     <div class="result-panel bg-white p-4 p-md-5">
                         {% if student %}
                             <div class="d-flex align-items-center gap-3 mb-4">
-                                <i class="bi bi-patch-check-fill text-success status-icon"></i>
-                                <div><p class="eyebrow mb-1 text-success">Verified record</p><h2 class="h4 mb-0">Student found</h2></div>
+                                {% if student.verification_status == 'Active' %}
+                                    <i class="bi bi-patch-check-fill text-success status-icon"></i>
+                                    <div><p class="eyebrow mb-1 text-success">Record located</p><h2 class="h4 mb-2">Student found</h2><span class="badge text-bg-success status-badge">Active</span></div>
+                                {% else %}
+                                    <i class="bi bi-exclamation-octagon-fill text-danger status-icon"></i>
+                                    <div><p class="eyebrow mb-1 text-danger">Attention required</p><h2 class="h4 mb-2">Student found</h2><span class="badge text-bg-danger status-badge">Inactive</span></div>
+                                {% endif %}
+                            </div>
+                            <div class="row g-2 small border-top border-bottom py-3 mb-4">
+                                <div class="col-sm-6"><span class="text-secondary">Student name</span><br><strong>{{ student.student_name }}</strong></div>
+                                <div class="col-sm-6"><span class="text-secondary">Roll number</span><br><strong>{{ student.roll_number }}</strong></div>
+                                <div class="col-sm-6"><span class="text-secondary">Department</span><br><strong>{{ student.department }}</strong></div>
+                                <div class="col-sm-6"><span class="text-secondary">Admission year</span><br><strong>{{ student.batch_year }}</strong></div>
+                                <div class="col-sm-6"><span class="text-secondary">Card expiry date</span><br><strong>{% if student.card_expiry_date %}{{ student.card_expiry_date|date:"d M Y" }}{% else %}Not provided{% endif %}</strong></div>
+                                <div class="col-sm-6"><span class="text-secondary">Verification status</span><br><strong>{{ student.verification_status }}</strong></div>
                             </div>
                             {% if student_card_url %}
                                 <div class="text-center"><img src="{{ student_card_url }}" class="id-card rounded shadow-sm" alt="Original university ID card"></div>
                             {% else %}
-                                <div class="alert alert-warning mb-0"><i class="bi bi-image me-2"></i>This record is active, but its ID card image is unavailable.</div>
+                                <div class="alert {% if student.verification_status == 'Active' %}alert-warning{% else %}alert-danger inactive-warning{% endif %} mb-0"><i class="bi bi-image me-2"></i>This record is {{ student.verification_status|lower }}, but its ID card image is unavailable.</div>
                             {% endif %}
+                            {% if student.verification_status == 'Active' %}<div class="alert alert-success mt-4 mb-0"><i class="bi bi-check-circle me-2"></i><strong>Active - Valid for Entry.</strong></div>{% else %}<div class="alert alert-danger inactive-warning mt-4 mb-0"><i class="bi bi-slash-circle me-2"></i><strong>Inactive - Not Valid for Entry.</strong> Do not permit entry based on this card.</div>{% endif %}
                         {% else %}
                             <div class="text-center py-4">
                                 <i class="bi bi-person-x text-warning status-icon"></i>
-                                <h2 class="h4 mt-3">Student not found</h2>
-                                <p class="text-secondary mb-4">No active student matches all three search fields.</p>
+                                <h2 class="h4 mt-3">Student Record Not Found</h2>
+                                <p class="text-secondary mb-4">No student record matches all three search fields.</p>
                                 <a class="btn btn-outline-primary" href="{% url 'student_search' %}"><i class="bi bi-arrow-counterclockwise me-2"></i>Try another search</a>
                             </div>
                         {% endif %}
