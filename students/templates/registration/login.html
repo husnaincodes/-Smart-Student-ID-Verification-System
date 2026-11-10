@@ -1,0 +1,55 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Sign in | University Security Portal</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <style>
+        :root { --navy: #11183f; --indigo: #29235f; --gold: #f5a623; --ink: #1d2d44; --mist: #f5f7fb; }
+        body { min-height: 100vh; overflow-x: hidden; color: var(--ink); background: radial-gradient(circle at 15% 15%, rgba(245, 166, 35, .18), transparent 25rem), linear-gradient(135deg, var(--navy), var(--indigo)); }
+        .portal-layout { max-width: 1080px; }
+        .brand-panel { color: #fff; }
+        .brand-panel h1 { font-size: clamp(2rem, 4vw, 3.25rem); letter-spacing: -.02em; }
+        .brand-panel p { color: #d7d9ec; max-width: 34rem; }
+        .logo-frame { width: 112px; height: 112px; padding: 8px; margin-right: auto; margin-left: auto; background: #fff; border-radius: 1.25rem; box-shadow: 0 12px 30px rgba(0, 0, 0, .22); }
+        .logo-frame img { width: 100%; height: 100%; object-fit: cover; border-radius: .9rem; }
+        .login-card { max-width: 430px; border: 0; border-radius: 1rem; box-shadow: 0 22px 55px rgba(0, 0, 0, .24); }
+        .card-kicker { color: #69758b; font-size: .75rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }
+        .form-label { color: var(--ink); font-weight: 600; }
+        .form-control { min-height: 50px; border-color: #c9d2df; border-radius: .65rem; }
+        .form-control:focus { border-color: var(--indigo); box-shadow: 0 0 0 .2rem rgba(41, 35, 95, .15); }
+        .btn-primary { min-height: 50px; border: 0; background: var(--indigo); border-radius: .65rem; }
+        .btn-primary:hover { background: var(--navy); }
+        .security-note { color: #708096; font-size: .82rem; }
+        @media (max-width: 767.98px) { .brand-panel { text-align: center; } .brand-panel p { margin-right: auto; margin-left: auto; } }
+    </style>
+</head>
+<body class="d-flex align-items-center">
+    <main class="container portal-layout py-5">
+        <div class="row align-items-center justify-content-center g-5">
+            <div class="col-md-6 brand-panel">
+                <div class="logo-frame mb-4"><img src="{% static 'itu.jpg' %}" alt="Information Technology University Punjab logo"></div>
+                <p class="text-uppercase fw-semibold small mb-2" style="letter-spacing: .14em; color: #f5a623;">Information Technology University Punjab</p>
+                <h1 class="fw-bold mb-3">University Security Portal</h1>
+                <p class="lead mb-0">A secure workspace for authorized personnel to verify student identity records quickly and confidently.</p>
+            </div>
+            <div class="col-md-6">
+        <div class="login-card bg-white mx-auto p-4 p-md-5">
+            <div class="mb-4"><p class="card-kicker mb-2">Authorized access</p><h2 class="h3 mb-2">Sign in to continue</h2><p class="text-secondary mb-0">Use your university account to access verification tools.</p></div>
+            {% if form.errors %}<div class="alert alert-danger">The username or password was not recognized.</div>{% endif %}
+            <form method="post">
+                {% csrf_token %}
+                <div class="mb-3"><label class="form-label" for="id_username">Username</label><input class="form-control" type="text" name="username" id="id_username" autocomplete="username" required autofocus></div>
+                <div class="mb-4"><label class="form-label" for="id_password">Password</label><input class="form-control" type="password" name="password" id="id_password" autocomplete="current-password" required></div>
+                <button class="btn btn-primary w-100" type="submit"><i class="bi bi-shield-lock me-2"></i>Sign in securely</button>
+            </form>
+            <p class="security-note text-center mt-4 mb-0"><i class="bi bi-lock-fill me-1"></i>Your session is protected by university authentication.</p>
+        </div>
+            </div>
+        </div>
+    </main>
+</body>
+</html>
