@@ -1,14 +1,14 @@
 # Smart Student ID Verification System
 
-A Django web application that lets authorized security staff verify a student's identity at a university entrance, even when the student has forgotten their physical ID card.
+A Django web application that lets authorized security staff verify a student's identity at a university entrance by looking up their record, viewing the original ID card image, and checking whether the card is still valid.
 
-[![Python](https://img.shields.io/badge/Python-3.10+-3776AB?logo=python&logoColor=white)](https://www.python.org/)
-[![Django](https://img.shields.io/badge/Django-Framework-092E20?logo=django&logoColor=white)](https://www.djangoproject.com/)
-[![Bootstrap](https://img.shields.io/badge/Bootstrap-5-7952B3?logo=bootstrap&logoColor=white)](https://getbootstrap.com/)
-[![SQLite](https://img.shields.io/badge/Database-SQLite-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
-[![Status](https://img.shields.io/badge/Status-Academic%20Project-orange)]()
+![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)
+![Django](https://img.shields.io/badge/Django-Web%20Framework-092E20?logo=django&logoColor=white)
+![Bootstrap](https://img.shields.io/badge/Bootstrap-5-7952B3?logo=bootstrap&logoColor=white)
+![SQLite](https://img.shields.io/badge/Database-SQLite-003B57?logo=sqlite&logoColor=white)
+![Project](https://img.shields.io/badge/Type-OOP%20Academic%20Project-orange)
 
-<!-- Add a screenshot or short GIF of the search page and a result here:
+<!-- Add a screenshot or short GIF of the search page and each result state:
 ![Verification page](docs/screenshots/verification.png)
 -->
 
@@ -16,6 +16,7 @@ A Django web application that lets authorized security staff verify a student's 
 
 - [Overview](#overview)
 - [Features](#features)
+- [Verification Rules](#verification-rules)
 - [How It Works](#how-it-works)
 - [Tech Stack](#tech-stack)
 - [Project Structure](#project-structure)
@@ -25,55 +26,90 @@ A Django web application that lets authorized security staff verify a student's 
 - [Security and Privacy](#security-and-privacy)
 - [Testing](#testing)
 - [Roadmap](#roadmap)
-- [Contributing](#contributing)
+- [Author](#author)
 - [License](#license)
 
 ## Overview
 
-Manual identity checks at campus gates are slow, and students who forget their ID cards cause further delays. This project replaces that process with a quick lookup: a guard selects the student's **admission year**, **department**, and enters the **roll number**. If an active matching record exists, the system displays the student's original uploaded ID card image for visual verification.
+Students sometimes arrive at campus without their physical ID cards, which slows entry and adds work for security staff. This project replaces slow manual checks with a quick digital lookup.
 
-**Goal:** make campus entry verification faster, simpler, and more organized.
+A guard selects the student's **admission year** and **department**, then enters the **roll number**. The system finds the matching record, shows the original uploaded ID card image, and reports whether the card is currently valid, expired, or deactivated.
 
-### Problem
+**Goal:** make university identity verification faster, more reliable, and better organized.
 
-- Delays at entry gates when students forget their ID cards
-- Time-consuming manual verification
-- No quick way for guards to access student identity records
+### The problem
 
-### Solution
+- Students forget or misplace their ID cards, causing delays at the gate.
+- Manual verification is slow and hard to do consistently.
+- Student identity records are inefficient to manage and access by hand.
+- Expired cards can be accepted by mistake when validity isn't tracked.
 
-A centralized platform where records are managed by administrators and looked up by verification staff using three fields: admission year, department, and roll number.
+### The solution
+
+A centralized platform where administrators manage student records and card expiry dates, and verification staff look up students using three fields: admission year, department, and roll number.
 
 ## Features
 
-**Verification**
-- Look up a student by admission year, department, and roll number
-- Display the original ID card image for a matching active record
-- Clear "not found" message when no active match exists
-- Search options (years, departments) are generated dynamically from existing records
+**Student verification**
+- Search by admission year, department, and roll number
+- Display the original uploaded ID card image and student details
+- Clear, color-coded result for every outcome: valid, expired, inactive, or not found
+- Search options (years and departments) generated dynamically from existing records
 
 **Record management (Django Admin)**
 - Add, edit, and remove student records in one place
-- Upload and manage ID card images
-- Mark students as Active or Inactive
-- Database-level uniqueness on admission year + department + roll number, preventing duplicates
+- Upload and replace ID card images
+- Set card expiry dates and Active/Inactive status
+- Search and filter records in the admin interface
+- Unique constraint on batch year + department + roll number prevents duplicates
+
+**ID card expiry management**
+- Expiry date is checked at verification time, so an expired card is never treated as valid
+- Cards expiring today remain valid through the end of that day
+- Manual deactivation always overrides the expiry date
 
 **Interface**
-- Clean, responsive layout built with Bootstrap 5
-- Works on desktop and mobile browsers
+- Clean, responsive Bootstrap 5 layout for desktop and mobile
+- Clear success and error messages
+- Visual status indicators and an ID card image preview
+
+## Verification Rules
+
+Each search is evaluated in the following order, and the first matching rule determines the result.
+
+| # | Condition | Result |
+|---|---|---|
+| 1 | No record matches the search | **Student Record Not Found** |
+| 2 | Student was manually deactivated | **Inactive: Not Valid for Entry** |
+| 3 | Card expiry date has passed | **Inactive: Expired Card** |
+| 4 | Card expires today | **Active: Valid for Today** |
+| 5 | Card expiry date is in the future | **Active: Valid for Entry** |
+
+For matched records (rules 2 to 5), the original ID card image is displayed so the guard can compare it with the person at the gate. Expired and inactive cards always show a warning and must never be accepted for entry.
+
+**Status values**
+
+- **Active:** the card is currently valid and the student is eligible for entry.
+- **Inactive:** the card has expired or an administrator has deactivated the student.
 
 ## How It Works
 
 ```mermaid
 flowchart TD
-    A[Open verification page] --> B[Select admission year]
-    B --> C[Select department]
-    C --> D[Enter roll number]
-    D --> E[Search]
-    E --> F{Active record found?}
-    F -- Yes --> G[Display original ID card image]
-    F -- No --> H[Show error message]
+    A[Open verification page] --> B[Select admission year and department]
+    B --> C[Enter roll number and search]
+    C --> D{Record found?}
+    D -- No --> E[Show: Student Record Not Found]
+    D -- Yes --> F{Manually deactivated?}
+    F -- Yes --> G[Show ID card + Inactive warning]
+    F -- No --> H{Expiry date passed?}
+    H -- Yes --> I[Show ID card + Expired warning]
+    H -- No --> J[Show ID card + Active: Valid for Entry]
 ```
+
+**Registration (administrator):** log in to Django Admin, create the student record, select the admission year and department, enter the card expiry date, upload the original ID card image, and save.
+
+**Verification (security staff):** open the verification page, select year and department, enter the roll number, search, then review the ID card image and status.
 
 ## Tech Stack
 
@@ -84,6 +120,7 @@ flowchart TD
 | Database | SQLite |
 | Frontend | HTML5, CSS3, Bootstrap 5, JavaScript |
 | Image handling | Pillow |
+| Version control | Git and GitHub |
 
 ## Project Structure
 
@@ -100,12 +137,13 @@ StudentVerification/
 │   │   └── search.html      # Verification page
 │   ├── admin.py             # Admin configuration
 │   ├── models.py            # Student model
-│   ├── views.py             # Search / verification logic
+│   ├── views.py             # Search and verification logic
 │   ├── urls.py
 │   └── tests.py
 ├── media/student_cards/     # Uploaded ID card images (not tracked in Git)
 ├── manage.py
-└── README.md
+├── README.md
+└── .gitignore
 ```
 
 > This shows the main files only. Your local copy may contain more.
@@ -121,9 +159,9 @@ StudentVerification/
 ### Installation
 
 ```bash
-# 1. Clone the repository
-git clone https://github.com/YOUR-USERNAME/YOUR-REPOSITORY.git
-cd YOUR-REPOSITORY
+# 1. Clone the repository into a folder named StudentVerification
+git clone https://github.com/husnaincodes/-Smart-Student-ID-Verification-System.git StudentVerification
+cd StudentVerification
 
 # 2. Create and activate a virtual environment
 python -m venv venv
@@ -136,7 +174,7 @@ source venv/bin/activate
 # 3. Install dependencies
 pip install django pillow
 
-# 4. Set up the database
+# 4. Apply database migrations
 python manage.py migrate
 
 # 5. Create an administrator account
@@ -153,47 +191,58 @@ Then open:
 | Student verification | http://127.0.0.1:8000/ |
 | Admin panel | http://127.0.0.1:8000/admin/ |
 
-> **Tip:** Run `pip freeze > requirements.txt` and commit the file so others can install with `pip install -r requirements.txt`.
+> **Notes**
+> - Run `python manage.py makemigrations` only if you change the models.
+> - Run `pip freeze > requirements.txt` and commit the file so others can install with `pip install -r requirements.txt`.
 
 ## Usage
 
 ### Administrators
 
-1. Log in to the Django Admin panel.
-2. Add a student: name, admission year, department, and roll number.
-3. Upload the original ID card image.
-4. Set the status to **Active** or **Inactive**.
+1. Open the Django Admin panel and log in.
+2. Go to the **Students** section and add a new student.
+3. Enter the student's name, roll number, admission year, and department.
+4. Upload the original ID card image.
+5. Enter the card expiry date.
+6. Set the status and save.
 
 ### Verification staff
 
 1. Open the verification page.
 2. Select the admission year and department.
 3. Enter the roll number and click **Search**.
-4. Compare the displayed ID card image with the person at the gate.
+4. Review the displayed ID card image and verification status.
 
-Inactive or non-existent records return a "not found" result.
+Security staff should only be given permission to verify students, never to modify records.
 
 ## Data Model
 
-Each student record contains the following (conceptual overview; see `students/models.py` for exact field names):
+The main model is `Student`.
 
 | Field | Description |
 |---|---|
-| Admission year | Batch the student belongs to |
-| Department | Student's department |
-| Roll number | Identifier within the batch and department |
-| ID card image | Uploaded image of the original university ID |
-| Status | Active or Inactive |
+| `student_name` | Full name of the student |
+| `roll_number` | Roll number, unique within a batch and department |
+| `batch_year` | Admission year |
+| `department` | Academic department |
+| `student_card` | Uploaded original ID card image |
+| `status` | Active or Inactive |
+| `card_expiry_date` | Expiry date of the ID card |
 
-A **unique constraint** on *(admission year, department, roll number)* guarantees one record per student.
+**Data integrity**
+
+- A unique constraint on (`batch_year`, `department`, `roll_number`) prevents duplicate identities.
+- ID card images are stored using Django media storage.
+- All data access goes through the Django ORM.
 
 ## Security and Privacy
 
-Student ID cards contain personal information. Please follow these guidelines.
+Student ID cards contain personal information, so handle them carefully.
 
 **For development and public repositories**
-- Use **fictional data** only. Never commit real student records or ID images.
-- Keep `db.sqlite3`, `media/`, and any secrets out of version control. Suggested `.gitignore` entries:
+
+- Use **fictional data** only. Never commit real student records or ID card images.
+- Keep `db.sqlite3`, `media/`, credentials, and secrets out of version control. Recommended `.gitignore` entries:
 
   ```gitignore
   venv/
@@ -205,40 +254,60 @@ Student ID cards contain personal information. Please follow these guidelines.
   ```
 
 **Before any real-world deployment**
-- [ ] Require authentication for the verification page, not only the admin panel
+
+- [ ] Require authentication on the verification page, not only the admin panel
 - [ ] Enforce role-based permissions (administrators vs. security staff)
-- [ ] Serve media files through protected access, not public URLs
+- [ ] Serve ID card images through an authorized access mechanism; Django's development media serving is **not** secure enough for production
 - [ ] Set `DEBUG = False` and restrict `ALLOWED_HOSTS`
 - [ ] Load `SECRET_KEY` from an environment variable
 - [ ] Serve the application over HTTPS
-- [ ] Replace SQLite with a production-grade database if load requires it
+- [ ] Use a production-grade database if load requires it
 
 ## Testing
+
+Run the automated tests:
 
 ```bash
 python manage.py test
 ```
 
+Manual test scenarios to complete before deployment:
+
+| Test case | Expected result |
+|---|---|
+| Search an Active student with a valid card | Details and ID card shown with Active status |
+| Search a manually deactivated student | ID card shown with Inactive warning |
+| Search a student with an expired card | ID card shown with Expired warning |
+| Search a non-existent student | Student Record Not Found |
+| Search with an incorrect roll number | No matching record |
+| Change a card's expiry date | Result reflects the updated validity |
+| Upload a valid image | Image uploaded successfully |
+| Enter a duplicate student identity | Duplicate record rejected |
+
 ## Roadmap
 
-- [ ] QR-code-based verification
-- [ ] Mobile-friendly interface for guards
-- [ ] Role-based access control for administrators and security staff
-- [ ] Verification activity logs (who checked what, and when)
+- [ ] QR-code-based student verification
+- [ ] Role-based access control for university staff
+- [ ] Verification activity logs
 - [ ] Advanced search and filtering
-- [ ] Deployment on a university-hosted server
+- [ ] Email notifications before ID card expiry
+- [ ] Mobile-friendly verification interface
+- [ ] Dashboard with student and verification statistics
+- [ ] Deployment on a university server
 
-## Contributing
+## Author
 
-This is an academic OOP project. Suggestions and constructive feedback are welcome. Feel free to open an issue or submit a pull request.
+**Husnain Tayab**
+GitHub: [@husnaincodes](https://github.com/husnaincodes)
+Repository: [Smart Student ID Verification System](https://github.com/husnaincodes/-Smart-Student-ID-Verification-System)
 
 ## License
 
-Provided for educational and academic purposes. A formal open-source license (e.g., MIT) can be added if the project is released for public reuse.
+Developed for educational and academic purposes as part of an Object-Oriented Programming project. A formal open-source license (for example, MIT) can be added if the project is released for public reuse.
 
 ---
 
 <p align="center">
   <b>Smart Student ID Verification System</b><br>
-  Faster, simpler campus identity verification.
+  <i>Simplifying student identity verification through technology.</i>
 </p>
